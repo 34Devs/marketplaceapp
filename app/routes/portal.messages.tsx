@@ -70,7 +70,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function PortalMessages() {
-  const { threads, vendorId } = useLoaderData<typeof loader>();
+  const { threads } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
 
   return (

@@ -6,13 +6,11 @@ import {
   Layout,
   Card,
   BlockStack,
-  Text,
   TextField,
   Select,
   Checkbox,
   Button,
   InlineStack,
-  Banner,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { useState, useCallback } from "react";
@@ -62,7 +60,7 @@ export default function SettingsPage() {
   const { settings } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const shopify = useAppBridge();
-  const [saved, setSaved] = useState(false);
+  const [, setSaved] = useState(false);
 
   const [formState, setFormState] = useState({
     marketplaceName: settings.marketplaceName,

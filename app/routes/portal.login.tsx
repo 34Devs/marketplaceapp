@@ -1,9 +1,8 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useActionData, Form, Link } from "@remix-run/react";
 import { authenticateVendor } from "../lib/vendor.server";
 import { createVendorSession, getVendorId } from "../lib/portal-auth.server";
-import { redirect } from "@remix-run/node";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const vendorId = await getVendorId(request);

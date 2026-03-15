@@ -101,7 +101,6 @@ export default function PortalAnalytics() {
     orderStats,
     totalCommissionPaid,
     totalEarnings,
-    totalOrderAmount,
     topProducts,
     recentReviews,
     monthlySales,

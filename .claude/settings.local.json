@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:shopify.dev)",
+      "WebFetch(domain:stripe.com)",
+      "Bash(shopify version:*)",
+      "Bash(npm -v)",
+      "Read(//private/tmp/**)",
+      "Bash(npx @shopify/create-app@latest --template remix --name vendorhub --path /tmp/vendorhub-temp)",
+      "Bash(docker-compose up:*)"
+    ]
+  }
+}

@@ -4,10 +4,17 @@ module.exports = {
   extends: [
     "@remix-run/eslint-config",
     "@remix-run/eslint-config/node",
-    "@remix-run/eslint-config/jest-testing-library",
     "prettier",
   ],
   globals: {
-    shopify: "readonly"
+    shopify: "readonly",
   },
+  overrides: [
+    {
+      files: ["tests/**/*.test.ts"],
+      rules: {
+        "no-undef": "off",
+      },
+    },
+  ],
 };

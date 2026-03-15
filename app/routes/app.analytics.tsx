@@ -77,7 +77,6 @@ export default function AnalyticsPage() {
     totalCommission,
     totalVendorEarnings,
     totalOrders,
-    totalOrderAmount,
   } = useLoaderData<typeof loader>();
 
   const formatCurrency = (amount: number) =>

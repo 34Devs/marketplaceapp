@@ -9,7 +9,7 @@ async function main() {
   console.log("Seeding database...");
 
   // Store Settings
-  const settings = await prisma.storeSettings.upsert({
+  await prisma.storeSettings.upsert({
     where: { shop: DEMO_SHOP },
     update: {},
     create: {
@@ -68,7 +68,7 @@ async function main() {
     },
   });
 
-  const enterprisePlan = await prisma.subscriptionPlan.upsert({
+  await prisma.subscriptionPlan.upsert({
     where: { id: "plan_enterprise" },
     update: {},
     create: {
@@ -139,7 +139,7 @@ async function main() {
     },
   });
 
-  const vendor3 = await prisma.vendor.upsert({
+  await prisma.vendor.upsert({
     where: { shop_email: { shop: DEMO_SHOP, email: "carol@fitnessfirst.com" } },
     update: {},
     create: {

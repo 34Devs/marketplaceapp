@@ -2,7 +2,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, payload } = await authenticate.webhook(request);
+  const { shop } = await authenticate.webhook(request);
 
   // GDPR: Return customer data on request
   // In production, this should gather all vendor-related data for the customer
