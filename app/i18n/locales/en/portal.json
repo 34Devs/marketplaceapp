@@ -1,0 +1,66 @@
+{
+  "title": "Vendor Portal",
+  "dashboard": {
+    "title": "Vendor Dashboard",
+    "welcome": "Welcome back, {{name}}!",
+    "totalSales": "Total Sales",
+    "totalOrders": "Total Orders",
+    "pendingPayouts": "Pending Payouts",
+    "rating": "Your Rating"
+  },
+  "register": {
+    "title": "Become a Vendor",
+    "storeName": "Store Name",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "description": "Store Description",
+    "submit": "Apply to Sell",
+    "success": "Application submitted! You'll be notified once approved.",
+    "alreadyRegistered": "Already have an account?"
+  },
+  "login": {
+    "title": "Vendor Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign In",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?"
+  },
+  "products": {
+    "title": "My Products",
+    "addProduct": "Add Product",
+    "editProduct": "Edit Product",
+    "productTitle": "Title",
+    "productDescription": "Description",
+    "price": "Price",
+    "inventory": "Inventory",
+    "images": "Images"
+  },
+  "orders": {
+    "title": "My Orders",
+    "orderDetail": "Order Detail",
+    "markFulfilled": "Mark as Fulfilled",
+    "trackingNumber": "Tracking Number"
+  },
+  "payouts": {
+    "title": "My Payouts",
+    "earnings": "Earnings",
+    "pendingBalance": "Pending Balance",
+    "nextPayout": "Next Payout",
+    "payoutHistory": "Payout History"
+  },
+  "profile": {
+    "title": "My Profile",
+    "storeName": "Store Name",
+    "description": "Description",
+    "logo": "Logo",
+    "banner": "Banner",
+    "contactInfo": "Contact Information"
+  },
+  "messages": {
+    "title": "Messages",
+    "newMessage": "New Message",
+    "noMessages": "No messages yet"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "title": "VendorHub Admin",
+  "dashboard": {
+    "title": "Marketplace Dashboard",
+    "totalVendors": "Total Vendors",
+    "pendingApprovals": "Pending Approvals",
+    "totalRevenue": "Total Revenue",
+    "pendingPayouts": "Pending Payouts",
+    "totalOrders": "Total Orders",
+    "totalProducts": "Total Products",
+    "recentOrders": "Recent Orders",
+    "topVendors": "Top Vendors"
+  },
+  "vendors": {
+    "title": "Vendor Management",
+    "approve": "Approve",
+    "reject": "Reject",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "viewProfile": "View Profile",
+    "commissionRate": "Commission Rate",
+    "totalSales": "Total Sales",
+    "joinDate": "Join Date"
+  },
+  "products": {
+    "title": "Product Management",
+    "approveProduct": "Approve Product",
+    "rejectProduct": "Reject Product",
+    "vendor": "Vendor",
+    "shopifyProduct": "Shopify Product"
+  },
+  "orders": {
+    "title": "Order Management",
+    "orderNumber": "Order Number",
+    "customer": "Customer",
+    "total": "Total",
+    "vendorBreakdown": "Vendor Breakdown",
+    "fulfillmentStatus": "Fulfillment Status"
+  },
+  "commissions": {
+    "title": "Commission Management",
+    "settings": "Commission Settings",
+    "globalRate": "Global Commission Rate",
+    "vendorOverrides": "Vendor Overrides",
+    "totalEarned": "Total Commission Earned"
+  },
+  "payouts": {
+    "title": "Payout Management",
+    "processBatch": "Process Payouts",
+    "pendingAmount": "Pending Amount",
+    "processedAmount": "Processed Amount"
+  },
+  "settings": {
+    "title": "Marketplace Settings",
+    "general": "General",
+    "marketplace": "Marketplace",
+    "paymentMethods": "Payment Methods",
+    "languages": "Languages"
+  }
+}

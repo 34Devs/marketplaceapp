@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Shopify Session (required by @shopify/shopify-app-remix) ───
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// ─── Store Settings ───
+
+model StoreSettings {
+  id                     String         @id @default(cuid())
+  shop                   String         @unique
+  marketplaceName        String         @default("Marketplace")
+  defaultCommissionRate  Float          @default(10.0)
+  defaultCommissionType  CommissionType @default(PERCENTAGE)
+  payoutSchedule         PayoutSchedule @default(MONTHLY)
+  minimumPayoutAmount    Float          @default(50.0)
+  currency               String         @default("USD")
+  autoApproveVendors     Boolean        @default(false)
+  autoApproveProducts    Boolean        @default(false)
+  vendorRegistrationOpen Boolean        @default(true)
+  defaultLanguage        String         @default("en")
+  enabledLanguages       String[]       @default(["en"])
+  stripeAccountId        String?
+  paypalClientId         String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+}
+
+// ─── Vendor ───
+
+model Vendor {
+  id                String       @id @default(cuid())
+  shop              String
+  shopifyCustomerId String?
+  email             String
+  storeName         String
+  slug              String
+  description       String?
+  logo              String?
+  banner            String?
+  phone             String?
+  address           Json?
+  status            VendorStatus @default(PENDING)
+
+  // Payout configuration
+  payoutMethod    PayoutMethod?
+  stripeConnectId String?
+  paypalEmail     String?
+
+  // Commission override (null = use store default)
+  commissionRate Float?
+  commissionType CommissionType?
+
+  // Auth
+  passwordHash     String
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  lastLoginAt      DateTime?
+
+  // Metadata
+  rating      Float @default(0)
+  totalSales  Float @default(0)
+  totalOrders Int   @default(0)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  approvedAt       DateTime?
+  suspendedAt      DateTime?
+  suspensionReason String?
+
+  // Relations
+  products         VendorProduct[]
+  orderItems       VendorOrderItem[]
+  commissions      Commission[]
+  payouts          Payout[]
+  subscription     VendorSubscription?
+  reviewsReceived  VendorReview[]
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
+  auditLogs        AuditLog[]
+
+  @@unique([shop, email])
+  @@unique([shop, slug])
+  @@index([shop, status])
+}
+
+// ─── Vendor Subscription ───
+
+model SubscriptionPlan {
+  id             String          @id @default(cuid())
+  shop           String
+  name           String
+  description    String?
+  price          Float
+  currency       String          @default("USD")
+  interval       BillingInterval @default(MONTHLY)
+  productLimit   Int?
+  commissionRate Float?
+  features       Json?
+  isActive       Boolean         @default(true)
+  sortOrder      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  subscriptions VendorSubscription[]
+
+  @@index([shop, isActive])
+}
+
+model VendorSubscription {
+  id                   String             @id @default(cuid())
+  vendorId             String             @unique
+  vendor               Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  stripeSubscriptionId String?
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  payments SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id             String             @id @default(cuid())
+  subscriptionId String
+  subscription   VendorSubscription @relation(fields: [subscriptionId], references: [id])
+  amount         Float
+  currency       String
+  status         PaymentStatus      @default(PENDING)
+  stripePaymentId String?
+  paidAt         DateTime?
+  createdAt      DateTime           @default(now())
+}
+
+// ─── Products ───
+
+model VendorProduct {
+  id                   String        @id @default(cuid())
+  vendorId             String
+  vendor               Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  shop                 String
+  shopifyProductId     String
+  shopifyProductHandle String?
+  title                String
+  status               ProductStatus @default(PENDING)
+  commissionRate       Float?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  orderItems VendorOrderItem[]
+
+  @@unique([shop, shopifyProductId])
+  @@index([vendorId])
+  @@index([shop, status])
+}
+
+// ─── Orders ───
+
+model VendorOrder {
+  id               String      @id @default(cuid())
+  shop             String
+  shopifyOrderId   String
+  shopifyOrderName String
+  customerEmail    String?
+  totalAmount      Float
+  currency         String
+  status           OrderStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  items VendorOrderItem[]
+
+  @@unique([shop, shopifyOrderId])
+  @@index([shop, status])
+}
+
+model VendorOrderItem {
+  id                String            @id @default(cuid())
+  orderId           String
+  order             VendorOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId          String
+  vendor            Vendor            @relation(fields: [vendorId], references: [id])
+  productId         String?
+  product           VendorProduct?    @relation(fields: [productId], references: [id])
+  shopifyLineItemId String
+  title             String
+  quantity          Int
+  price             Float
+  totalAmount       Float
+  currency          String
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+  fulfilledAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  commission Commission?
+
+  @@index([vendorId])
+  @@index([orderId])
+}
+
+// ─── Commissions ───
+
+model Commission {
+  id               String           @id @default(cuid())
+  shop             String
+  vendorId         String
+  vendor           Vendor           @relation(fields: [vendorId], references: [id])
+  orderItemId      String           @unique
+  orderItem        VendorOrderItem  @relation(fields: [orderItemId], references: [id])
+  orderAmount      Float
+  commissionRate   Float
+  commissionType   CommissionType
+  commissionAmount Float
+  vendorEarnings   Float
+  currency         String
+  status           CommissionStatus @default(PENDING)
+  payoutId         String?
+  payout           Payout?          @relation(fields: [payoutId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([vendorId, status])
+  @@index([shop, status])
+  @@index([payoutId])
+}
+
+// ─── Payouts ───
+
+model Payout {
+  id               String       @id @default(cuid())
+  shop             String
+  vendorId         String
+  vendor           Vendor       @relation(fields: [vendorId], references: [id])
+  amount           Float
+  currency         String
+  method           PayoutMethod
+  status           PayoutStatus @default(PENDING)
+  stripeTransferId String?
+  paypalBatchId    String?
+  reference        String?
+  note             String?
+  processedAt      DateTime?
+  failedAt         DateTime?
+  failureReason    String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  commissions Commission[]
+
+  @@index([vendorId, status])
+  @@index([shop, status])
+}
+
+// ─── Reviews ───
+
+model VendorReview {
+  id                String   @id @default(cuid())
+  shop              String
+  vendorId          String
+  vendor            Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  shopifyCustomerId String
+  customerName      String
+  customerEmail     String?
+  rating            Int
+  title             String?
+  body              String?
+  isVerified        Boolean  @default(false)
+  isPublished       Boolean  @default(true)
+  reply             String?
+  repliedAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([vendorId, isPublished])
+  @@index([shop])
+}
+
+// ─── Messages ───
+
+model Message {
+  id         String     @id @default(cuid())
+  shop       String
+  threadId   String
+  senderId   String
+  sender     Vendor     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String?
+  receiver   Vendor?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  senderType SenderType
+  subject    String?
+  body       String
+  isRead     Boolean    @default(false)
+  readAt     DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([threadId])
+  @@index([receiverId, isRead])
+  @@index([shop])
+}
+
+// ─── Audit Logs ───
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  shop        String
+  vendorId    String?
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  details     Json?
+  performedBy String
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([shop, entityType, entityId])
+  @@index([vendorId])
+  @@index([createdAt])
+}
+
+// ─── Enums ───
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REJECTED
+  DEACTIVATED
+}
+
+enum PayoutMethod {
+  STRIPE
+  PAYPAL
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ProductStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  FULFILLED
+  PARTIALLY_FULFILLED
+  CANCELLED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutSchedule {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum SenderType {
+  VENDOR
+  ADMIN
+  CUSTOMER
+}
