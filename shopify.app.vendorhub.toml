@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "e3a621c8b803bd55234fa4267e4d8f88"
+client_id = "6e4cba00f51fa0a5ba327b3eb3600b2b"
 name = "VendorHub"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://example.com"
 embedded = true
 
 [build]
@@ -17,4 +17,4 @@ api_version = "2026-04"
 scopes = ""
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://example.com/api/auth" ]

@@ -3,6 +3,7 @@ api_version = "2024-10"
 [[extensions]]
 name = "VendorHub Theme"
 handle = "vendorhub-theme"
+uid = "2862e76b-e967-896a-fd17-e81f43bce22fee588a3f"
 type = "theme"
 
   [[extensions.targeting]]

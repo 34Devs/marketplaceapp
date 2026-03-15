@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link as RemixLink } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -13,7 +13,21 @@ import {
   Badge,
   DataTable,
   Link,
+  Icon,
+  Divider,
+  Banner,
+  ProgressBar,
 } from "@shopify/polaris";
+import {
+  PersonIcon,
+  ProductIcon,
+  OrderIcon,
+  CashDollarIcon,
+  ClockIcon,
+  CheckIcon,
+  AlertCircleIcon,
+  ChartVerticalFilledIcon,
+} from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
@@ -23,7 +37,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  // Ensure store settings exist
   await db.storeSettings.upsert({
     where: { shop },
     update: {},
@@ -34,16 +47,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalVendors,
     pendingVendors,
     approvedVendors,
+    suspendedVendors,
     totalProducts,
+    approvedProducts,
+    pendingProducts,
     totalOrders,
     pendingPayouts,
     recentVendors,
     commissionStats,
+    recentOrders,
+    topVendors,
   ] = await Promise.all([
     db.vendor.count({ where: { shop } }),
     db.vendor.count({ where: { shop, status: "PENDING" } }),
     db.vendor.count({ where: { shop, status: "APPROVED" } }),
+    db.vendor.count({ where: { shop, status: "SUSPENDED" } }),
     db.vendorProduct.count({ where: { shop } }),
+    db.vendorProduct.count({ where: { shop, status: "APPROVED" } }),
+    db.vendorProduct.count({ where: { shop, status: "PENDING" } }),
     db.vendorOrder.count({ where: { shop } }),
     db.payout.count({ where: { shop, status: "PENDING" } }),
     db.vendor.findMany({
@@ -56,12 +77,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         email: true,
         status: true,
         totalSales: true,
+        totalOrders: true,
+        rating: true,
         createdAt: true,
       },
     }),
     db.commission.aggregate({
       where: { shop, status: "APPROVED" },
       _sum: { commissionAmount: true, vendorEarnings: true },
+    }),
+    db.vendorOrder.findMany({
+      where: { shop },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        shopifyOrderId: true,
+        shopifyOrderName: true,
+        totalAmount: true,
+        createdAt: true,
+        items: {
+          take: 1,
+          select: { vendor: { select: { storeName: true } } },
+        },
+      },
+    }),
+    db.vendor.findMany({
+      where: { shop, status: "APPROVED" },
+      orderBy: { totalSales: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        storeName: true,
+        totalSales: true,
+        totalOrders: true,
+        rating: true,
+      },
     }),
   ]);
 
@@ -74,40 +125,50 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalVendors,
     pendingVendors,
     approvedVendors,
+    suspendedVendors,
     totalProducts,
+    approvedProducts,
+    pendingProducts,
     totalOrders,
     pendingPayouts,
     totalRevenue,
     totalCommissionEarned,
     recentVendors,
+    recentOrders,
+    topVendors,
   });
 };
 
 function StatCard({
   title,
   value,
-  suffix,
+  icon,
+  trendLabel,
 }: {
   title: string;
   value: string | number;
-  suffix?: string;
+  icon: React.FunctionComponent;
+  trendLabel?: string;
 }) {
   return (
     <Card>
-      <BlockStack gap="200">
-        <Text as="p" variant="bodyMd" tone="subdued">
-          {title}
-        </Text>
-        <InlineStack align="start" blockAlign="baseline" gap="100">
-          <Text as="p" variant="headingXl" fontWeight="bold">
-            {value}
+      <BlockStack gap="300">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="p" variant="bodyMd" tone="subdued">
+            {title}
           </Text>
-          {suffix && (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              {suffix}
-            </Text>
-          )}
+          <div style={{ width: 20, height: 20 }}>
+            <Icon source={icon} tone="subdued" />
+          </div>
         </InlineStack>
+        <Text as="p" variant="headingXl" fontWeight="bold">
+          {value}
+        </Text>
+        {trendLabel && (
+          <Text as="p" variant="bodySm" tone="subdued">
+            {trendLabel}
+          </Text>
+        )}
       </BlockStack>
     </Card>
   );
@@ -128,17 +189,27 @@ function statusBadge(status: string) {
   }
 }
 
+function formatRating(rating: number) {
+  if (rating <= 0) return "-";
+  return rating.toFixed(1) + " / 5.0";
+}
+
 export default function Dashboard() {
   const {
     totalVendors,
     pendingVendors,
     approvedVendors,
+    suspendedVendors,
     totalProducts,
+    approvedProducts,
+    pendingProducts,
     totalOrders,
     pendingPayouts,
     totalRevenue,
     totalCommissionEarned,
     recentVendors,
+    recentOrders,
+    topVendors,
   } = useLoaderData<typeof loader>();
 
   const formatCurrency = (amount: number) =>
@@ -147,50 +218,173 @@ export default function Dashboard() {
       currency: "USD",
     }).format(amount);
 
+  const vendorApprovalRate =
+    totalVendors > 0 ? Math.round((approvedVendors / totalVendors) * 100) : 0;
+
+  const productApprovalRate =
+    totalProducts > 0
+      ? Math.round((approvedProducts / totalProducts) * 100)
+      : 0;
+
   const recentVendorRows = recentVendors.map((vendor) => [
     <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
       {vendor.storeName}
     </Link>,
     vendor.email,
     statusBadge(vendor.status),
+    formatRating(vendor.rating),
     formatCurrency(vendor.totalSales),
     new Date(vendor.createdAt).toLocaleDateString(),
   ]);
 
+  const topVendorRows = topVendors.map((vendor) => [
+    <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
+      {vendor.storeName}
+    </Link>,
+    formatCurrency(vendor.totalSales),
+    String(vendor.totalOrders),
+    formatRating(vendor.rating),
+  ]);
+
+  const recentOrderRows = recentOrders.map((order) => [
+    order.shopifyOrderName || order.shopifyOrderId,
+    order.items[0]?.vendor?.storeName || "-",
+    formatCurrency(Number(order.totalAmount)),
+    new Date(order.createdAt).toLocaleDateString(),
+  ]);
+
   return (
     <Page>
-      <TitleBar title="VendorHub - Marketplace Dashboard" />
+      <TitleBar title="VendorHub Dashboard" />
       <BlockStack gap="500">
+        {/* Pending alerts */}
+        {pendingVendors > 0 && (
+          <Banner
+            title={`${pendingVendors} vendor${pendingVendors > 1 ? "s" : ""} awaiting approval`}
+            tone="warning"
+            action={{ content: "Review vendors", url: "/app/vendors" }}
+          />
+        )}
+        {pendingProducts > 0 && (
+          <Banner
+            title={`${pendingProducts} product${pendingProducts > 1 ? "s" : ""} awaiting approval`}
+            tone="info"
+            action={{ content: "Review products", url: "/app/products" }}
+          />
+        )}
+
+        {/* Revenue Stats */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
-          <StatCard title="Total Vendors" value={totalVendors} />
-          <StatCard title="Pending Approvals" value={pendingVendors} />
           <StatCard
             title="Total Revenue"
             value={formatCurrency(totalRevenue)}
+            icon={CashDollarIcon}
           />
           <StatCard
             title="Commission Earned"
             value={formatCurrency(totalCommissionEarned)}
+            icon={ChartVerticalFilledIcon}
+          />
+          <StatCard
+            title="Total Orders"
+            value={totalOrders}
+            icon={OrderIcon}
+          />
+          <StatCard
+            title="Pending Payouts"
+            value={pendingPayouts}
+            icon={ClockIcon}
           />
         </InlineGrid>
 
+        {/* Vendor & Product Stats */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
-          <StatCard title="Active Vendors" value={approvedVendors} />
-          <StatCard title="Total Products" value={totalProducts} />
-          <StatCard title="Total Orders" value={totalOrders} />
-          <StatCard title="Pending Payouts" value={pendingPayouts} />
+          <StatCard
+            title="Total Vendors"
+            value={totalVendors}
+            icon={PersonIcon}
+            trendLabel={`${approvedVendors} active, ${pendingVendors} pending`}
+          />
+          <StatCard
+            title="Total Products"
+            value={totalProducts}
+            icon={ProductIcon}
+            trendLabel={`${approvedProducts} approved, ${pendingProducts} pending`}
+          />
+          <StatCard
+            title="Active Vendors"
+            value={approvedVendors}
+            icon={CheckIcon}
+          />
+          <StatCard
+            title="Suspended"
+            value={suspendedVendors}
+            icon={AlertCircleIcon}
+          />
         </InlineGrid>
 
+        {/* Vendor Approval Rate & Product Approval Rate */}
+        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">
+                Vendor Approval Rate
+              </Text>
+              <InlineStack align="space-between">
+                <Text as="p" variant="headingLg">
+                  {vendorApprovalRate}%
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {approvedVendors} / {totalVendors} vendors
+                </Text>
+              </InlineStack>
+              <ProgressBar
+                progress={vendorApprovalRate}
+                tone="primary"
+                size="small"
+              />
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">
+                Product Approval Rate
+              </Text>
+              <InlineStack align="space-between">
+                <Text as="p" variant="headingLg">
+                  {productApprovalRate}%
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {approvedProducts} / {totalProducts} products
+                </Text>
+              </InlineStack>
+              <ProgressBar
+                progress={productApprovalRate}
+                tone="primary"
+                size="small"
+              />
+            </BlockStack>
+          </Card>
+        </InlineGrid>
+
+        {/* Tables section */}
         <Layout>
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Recent Vendors
-                </Text>
+                <InlineStack align="space-between">
+                  <Text as="h2" variant="headingMd">
+                    Recent Vendors
+                  </Text>
+                  <Link url="/app/vendors" removeUnderline>
+                    View all
+                  </Link>
+                </InlineStack>
+                <Divider />
                 {recentVendors.length > 0 ? (
                   <DataTable
                     columnContentTypes={[
+                      "text",
                       "text",
                       "text",
                       "text",
@@ -201,6 +395,7 @@ export default function Dashboard() {
                       "Store Name",
                       "Email",
                       "Status",
+                      "Rating",
                       "Total Sales",
                       "Joined",
                     ]}
@@ -208,7 +403,12 @@ export default function Dashboard() {
                   />
                 ) : (
                   <Box padding="400">
-                    <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
+                    <Text
+                      as="p"
+                      variant="bodyMd"
+                      tone="subdued"
+                      alignment="center"
+                    >
                       No vendors yet. Share your vendor registration link to get
                       started!
                     </Text>
@@ -218,6 +418,145 @@ export default function Dashboard() {
             </Card>
           </Layout.Section>
         </Layout>
+
+        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+          {/* Top Vendors */}
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <Text as="h2" variant="headingMd">
+                  Top Vendors
+                </Text>
+                <Link url="/app/vendors" removeUnderline>
+                  View all
+                </Link>
+              </InlineStack>
+              <Divider />
+              {topVendors.length > 0 ? (
+                <DataTable
+                  columnContentTypes={["text", "numeric", "numeric", "text"]}
+                  headings={["Vendor", "Sales", "Orders", "Rating"]}
+                  rows={topVendorRows}
+                />
+              ) : (
+                <Box padding="400">
+                  <Text
+                    as="p"
+                    variant="bodyMd"
+                    tone="subdued"
+                    alignment="center"
+                  >
+                    No vendor data yet.
+                  </Text>
+                </Box>
+              )}
+            </BlockStack>
+          </Card>
+
+          {/* Recent Orders */}
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <Text as="h2" variant="headingMd">
+                  Recent Orders
+                </Text>
+                <Link url="/app/orders" removeUnderline>
+                  View all
+                </Link>
+              </InlineStack>
+              <Divider />
+              {recentOrders.length > 0 ? (
+                <DataTable
+                  columnContentTypes={["text", "text", "numeric", "text"]}
+                  headings={["Order", "Vendor", "Amount", "Date"]}
+                  rows={recentOrderRows}
+                />
+              ) : (
+                <Box padding="400">
+                  <Text
+                    as="p"
+                    variant="bodyMd"
+                    tone="subdued"
+                    alignment="center"
+                  >
+                    No orders yet.
+                  </Text>
+                </Box>
+              )}
+            </BlockStack>
+          </Card>
+        </InlineGrid>
+
+        {/* Quick Actions */}
+        <Card>
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingMd">
+              Quick Actions
+            </Text>
+            <Divider />
+            <InlineStack gap="300" wrap>
+              <RemixLink to="/app/vendors" style={{ textDecoration: "none" }}>
+                <Box
+                  padding="300"
+                  borderRadius="200"
+                  background="bg-surface-secondary"
+                >
+                  <InlineStack gap="200" blockAlign="center">
+                    <Icon source={PersonIcon} tone="base" />
+                    <Text as="span" variant="bodyMd">
+                      Manage Vendors
+                    </Text>
+                  </InlineStack>
+                </Box>
+              </RemixLink>
+              <RemixLink to="/app/products" style={{ textDecoration: "none" }}>
+                <Box
+                  padding="300"
+                  borderRadius="200"
+                  background="bg-surface-secondary"
+                >
+                  <InlineStack gap="200" blockAlign="center">
+                    <Icon source={ProductIcon} tone="base" />
+                    <Text as="span" variant="bodyMd">
+                      Review Products
+                    </Text>
+                  </InlineStack>
+                </Box>
+              </RemixLink>
+              <RemixLink
+                to="/app/commissions"
+                style={{ textDecoration: "none" }}
+              >
+                <Box
+                  padding="300"
+                  borderRadius="200"
+                  background="bg-surface-secondary"
+                >
+                  <InlineStack gap="200" blockAlign="center">
+                    <Icon source={CashDollarIcon} tone="base" />
+                    <Text as="span" variant="bodyMd">
+                      View Commissions
+                    </Text>
+                  </InlineStack>
+                </Box>
+              </RemixLink>
+              <RemixLink to="/app/settings" style={{ textDecoration: "none" }}>
+                <Box
+                  padding="300"
+                  borderRadius="200"
+                  background="bg-surface-secondary"
+                >
+                  <InlineStack gap="200" blockAlign="center">
+                    <Icon source={ClockIcon} tone="base" />
+                    <Text as="span" variant="bodyMd">
+                      Settings
+                    </Text>
+                  </InlineStack>
+                </Box>
+              </RemixLink>
+            </InlineStack>
+          </BlockStack>
+        </Card>
       </BlockStack>
     </Page>
   );

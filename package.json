@@ -31,6 +31,7 @@
     "@remix-run/serve": "^2.16.1",
     "@shopify/app-bridge-react": "^4.1.6",
     "@shopify/polaris": "^12.0.0",
+    "@shopify/shopify-api": "^13.0.0",
     "@shopify/shopify-app-remix": "^4.1.0",
     "@shopify/shopify-app-session-storage-prisma": "^8.0.0",
     "bcryptjs": "^3.0.3",
@@ -59,6 +60,7 @@
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.2.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.2.2",
     "vite": "^6.2.2",
     "vitest": "^4.1.0"
@@ -77,6 +79,9 @@
     "@graphql-codegen/typescript-operations": "4.5.0",
     "minimatch": "9.0.5",
     "vite": "^6.2.2"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "overrides": {
     "@graphql-tools/url-loader": "8.0.16",
