@@ -1,20 +1,17 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, Link as RemixLink } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import {
   Page,
-  Layout,
   Card,
   BlockStack,
   Text,
   InlineGrid,
-  Box,
   InlineStack,
   Badge,
   DataTable,
   Link,
   Divider,
-  Banner,
   ProgressBar,
   Button,
 } from "@shopify/polaris";
@@ -45,7 +42,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     pendingPayouts,
     recentVendors,
     commissionStats,
-    recentOrders,
     topVendors,
   ] = await Promise.all([
     db.vendor.count({ where: { shop } }),
@@ -75,22 +71,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     db.commission.aggregate({
       where: { shop, status: "APPROVED" },
       _sum: { commissionAmount: true, vendorEarnings: true },
-    }),
-    db.vendorOrder.findMany({
-      where: { shop },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        shopifyOrderId: true,
-        shopifyOrderName: true,
-        totalAmount: true,
-        createdAt: true,
-        items: {
-          take: 1,
-          select: { vendor: { select: { storeName: true } } },
-        },
-      },
     }),
     db.vendor.findMany({
       where: { shop, status: "APPROVED" },
@@ -124,38 +104,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalRevenue,
     totalCommissionEarned,
     recentVendors,
-    recentOrders,
     topVendors,
   });
 };
-
-function StatCard({
-  title,
-  value,
-  trendLabel,
-}: {
-  title: string;
-  value: string | number;
-  trendLabel?: string;
-}) {
-  return (
-    <Card>
-      <BlockStack gap="300">
-        <Text as="p" variant="bodyMd" tone="subdued">
-          {title}
-        </Text>
-        <Text as="p" variant="headingXl" fontWeight="bold">
-          {value}
-        </Text>
-        {trendLabel && (
-          <Text as="p" variant="bodySm" tone="subdued">
-            {trendLabel}
-          </Text>
-        )}
-      </BlockStack>
-    </Card>
-  );
-}
 
 function statusBadge(status: string) {
   switch (status) {
@@ -172,28 +123,8 @@ function statusBadge(status: string) {
   }
 }
 
-function formatRating(rating: number) {
-  if (rating <= 0) return "-";
-  return rating.toFixed(1) + " / 5.0";
-}
-
 export default function Dashboard() {
-  const {
-    totalVendors,
-    pendingVendors,
-    approvedVendors,
-    suspendedVendors,
-    totalProducts,
-    approvedProducts,
-    pendingProducts,
-    totalOrders,
-    pendingPayouts,
-    totalRevenue,
-    totalCommissionEarned,
-    recentVendors,
-    recentOrders,
-    topVendors,
-  } = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", {
@@ -202,265 +133,222 @@ export default function Dashboard() {
     }).format(amount);
 
   const vendorApprovalRate =
-    totalVendors > 0 ? Math.round((approvedVendors / totalVendors) * 100) : 0;
-
-  const productApprovalRate =
-    totalProducts > 0
-      ? Math.round((approvedProducts / totalProducts) * 100)
+    data.totalVendors > 0
+      ? Math.round((data.approvedVendors / data.totalVendors) * 100)
       : 0;
 
-  const recentVendorRows = recentVendors.map((vendor) => [
+  const productApprovalRate =
+    data.totalProducts > 0
+      ? Math.round((data.approvedProducts / data.totalProducts) * 100)
+      : 0;
+
+  const recentVendorRows = data.recentVendors.map((vendor) => [
     <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
       {vendor.storeName}
     </Link>,
     vendor.email,
     statusBadge(vendor.status),
-    formatRating(vendor.rating),
+    vendor.rating > 0 ? vendor.rating.toFixed(1) : "-",
     formatCurrency(vendor.totalSales),
     new Date(vendor.createdAt).toLocaleDateString(),
   ]);
 
-  const topVendorRows = topVendors.map((vendor) => [
+  const topVendorRows = data.topVendors.map((vendor) => [
     <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
       {vendor.storeName}
     </Link>,
     formatCurrency(vendor.totalSales),
     String(vendor.totalOrders),
-    formatRating(vendor.rating),
-  ]);
-
-  const recentOrderRows = recentOrders.map((order) => [
-    order.shopifyOrderName || order.shopifyOrderId,
-    order.items[0]?.vendor?.storeName || "-",
-    formatCurrency(Number(order.totalAmount)),
-    new Date(order.createdAt).toLocaleDateString(),
+    vendor.rating > 0 ? vendor.rating.toFixed(1) : "-",
   ]);
 
   return (
-    <Page>
+    <Page title="VendorHub Dashboard">
       <TitleBar title="VendorHub Dashboard" />
       <BlockStack gap="500">
         {/* Pending alerts */}
-        {pendingVendors > 0 && (
-          <Banner
-            title={`${pendingVendors} vendor${pendingVendors > 1 ? "s" : ""} awaiting approval`}
-            tone="warning"
-            action={{ content: "Review vendors", url: "/app/vendors" }}
-          />
+        {data.pendingVendors > 0 && (
+          <Card>
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="p" variant="bodyMd" fontWeight="semibold" tone="caution">
+                {data.pendingVendors} vendor{data.pendingVendors > 1 ? "s" : ""} awaiting approval
+              </Text>
+              <Button url="/app/vendors" size="slim">Review</Button>
+            </InlineStack>
+          </Card>
         )}
-        {pendingProducts > 0 && (
-          <Banner
-            title={`${pendingProducts} product${pendingProducts > 1 ? "s" : ""} awaiting approval`}
-            tone="info"
-            action={{ content: "Review products", url: "/app/products" }}
-          />
+        {data.pendingProducts > 0 && (
+          <Card>
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {data.pendingProducts} product{data.pendingProducts > 1 ? "s" : ""} awaiting approval
+              </Text>
+              <Button url="/app/products" size="slim">Review</Button>
+            </InlineStack>
+          </Card>
         )}
 
-        {/* Revenue Stats */}
+        {/* Revenue Stats - Row 1 */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
-          <StatCard
-            title="Total Revenue"
-            value={formatCurrency(totalRevenue)}
-          />
-          <StatCard
-            title="Commission Earned"
-            value={formatCurrency(totalCommissionEarned)}
-          />
-          <StatCard title="Total Orders" value={totalOrders} />
-          <StatCard title="Pending Payouts" value={pendingPayouts} />
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Total Revenue</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {formatCurrency(data.totalRevenue)}
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Commission Earned</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {formatCurrency(data.totalCommissionEarned)}
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Total Orders</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.totalOrders}
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Pending Payouts</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.pendingPayouts}
+              </Text>
+            </BlockStack>
+          </Card>
         </InlineGrid>
 
-        {/* Vendor & Product Stats */}
+        {/* Vendor & Product Stats - Row 2 */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
-          <StatCard
-            title="Total Vendors"
-            value={totalVendors}
-            trendLabel={`${approvedVendors} active, ${pendingVendors} pending`}
-          />
-          <StatCard
-            title="Total Products"
-            value={totalProducts}
-            trendLabel={`${approvedProducts} approved, ${pendingProducts} pending`}
-          />
-          <StatCard title="Active Vendors" value={approvedVendors} />
-          <StatCard title="Suspended" value={suspendedVendors} />
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Total Vendors</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.totalVendors}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {data.approvedVendors} active, {data.pendingVendors} pending
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Total Products</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.totalProducts}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {data.approvedProducts} approved, {data.pendingProducts} pending
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Active Vendors</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.approvedVendors}
+              </Text>
+            </BlockStack>
+          </Card>
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">Suspended</Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">
+                {data.suspendedVendors}
+              </Text>
+            </BlockStack>
+          </Card>
         </InlineGrid>
 
         {/* Approval Rates */}
         <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">
-                Vendor Approval Rate
-              </Text>
+              <Text as="h2" variant="headingMd">Vendor Approval Rate</Text>
               <InlineStack align="space-between">
-                <Text as="p" variant="headingLg">
-                  {vendorApprovalRate}%
-                </Text>
+                <Text as="p" variant="headingLg">{vendorApprovalRate}%</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  {approvedVendors} / {totalVendors} vendors
+                  {data.approvedVendors} / {data.totalVendors} vendors
                 </Text>
               </InlineStack>
-              <ProgressBar
-                progress={vendorApprovalRate}
-                tone="primary"
-                size="small"
-              />
+              <ProgressBar progress={vendorApprovalRate} tone="primary" size="small" />
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">
-                Product Approval Rate
-              </Text>
+              <Text as="h2" variant="headingMd">Product Approval Rate</Text>
               <InlineStack align="space-between">
-                <Text as="p" variant="headingLg">
-                  {productApprovalRate}%
-                </Text>
+                <Text as="p" variant="headingLg">{productApprovalRate}%</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  {approvedProducts} / {totalProducts} products
+                  {data.approvedProducts} / {data.totalProducts} products
                 </Text>
               </InlineStack>
-              <ProgressBar
-                progress={productApprovalRate}
-                tone="primary"
-                size="small"
+              <ProgressBar progress={productApprovalRate} tone="primary" size="small" />
+            </BlockStack>
+          </Card>
+        </InlineGrid>
+
+        {/* Recent Vendors */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <Text as="h2" variant="headingMd">Recent Vendors</Text>
+              <Link url="/app/vendors" removeUnderline>View all</Link>
+            </InlineStack>
+            <Divider />
+            {data.recentVendors.length > 0 ? (
+              <DataTable
+                columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
+                headings={["Store Name", "Email", "Status", "Rating", "Total Sales", "Joined"]}
+                rows={recentVendorRows}
               />
-            </BlockStack>
-          </Card>
-        </InlineGrid>
+            ) : (
+              <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
+                No vendors yet. Share your vendor registration link to get started!
+              </Text>
+            )}
+          </BlockStack>
+        </Card>
 
-        {/* Recent Vendors Table */}
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Text as="h2" variant="headingMd">
-                    Recent Vendors
-                  </Text>
-                  <Link url="/app/vendors" removeUnderline>
-                    View all
-                  </Link>
-                </InlineStack>
-                <Divider />
-                {recentVendors.length > 0 ? (
-                  <DataTable
-                    columnContentTypes={[
-                      "text",
-                      "text",
-                      "text",
-                      "text",
-                      "numeric",
-                      "text",
-                    ]}
-                    headings={[
-                      "Store Name",
-                      "Email",
-                      "Status",
-                      "Rating",
-                      "Total Sales",
-                      "Joined",
-                    ]}
-                    rows={recentVendorRows}
-                  />
-                ) : (
-                  <Box padding="400">
-                    <Text
-                      as="p"
-                      variant="bodyMd"
-                      tone="subdued"
-                      alignment="center"
-                    >
-                      No vendors yet. Share your vendor registration link to get
-                      started!
-                    </Text>
-                  </Box>
-                )}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-
-        {/* Top Vendors & Recent Orders side by side */}
-        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">
-                  Top Vendors
-                </Text>
-                <Link url="/app/vendors" removeUnderline>
-                  View all
-                </Link>
-              </InlineStack>
-              <Divider />
-              {topVendors.length > 0 ? (
-                <DataTable
-                  columnContentTypes={["text", "numeric", "numeric", "text"]}
-                  headings={["Vendor", "Sales", "Orders", "Rating"]}
-                  rows={topVendorRows}
-                />
-              ) : (
-                <Box padding="400">
-                  <Text
-                    as="p"
-                    variant="bodyMd"
-                    tone="subdued"
-                    alignment="center"
-                  >
-                    No vendor data yet.
-                  </Text>
-                </Box>
-              )}
-            </BlockStack>
-          </Card>
-
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">
-                  Recent Orders
-                </Text>
-                <Link url="/app/orders" removeUnderline>
-                  View all
-                </Link>
-              </InlineStack>
-              <Divider />
-              {recentOrders.length > 0 ? (
-                <DataTable
-                  columnContentTypes={["text", "text", "numeric", "text"]}
-                  headings={["Order", "Vendor", "Amount", "Date"]}
-                  rows={recentOrderRows}
-                />
-              ) : (
-                <Box padding="400">
-                  <Text
-                    as="p"
-                    variant="bodyMd"
-                    tone="subdued"
-                    alignment="center"
-                  >
-                    No orders yet.
-                  </Text>
-                </Box>
-              )}
-            </BlockStack>
-          </Card>
-        </InlineGrid>
+        {/* Top Vendors */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <Text as="h2" variant="headingMd">Top Vendors by Sales</Text>
+              <Link url="/app/vendors" removeUnderline>View all</Link>
+            </InlineStack>
+            <Divider />
+            {data.topVendors.length > 0 ? (
+              <DataTable
+                columnContentTypes={["text", "numeric", "numeric", "text"]}
+                headings={["Vendor", "Sales", "Orders", "Rating"]}
+                rows={topVendorRows}
+              />
+            ) : (
+              <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
+                No vendor data yet.
+              </Text>
+            )}
+          </BlockStack>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
           <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">
-              Quick Actions
-            </Text>
+            <Text as="h2" variant="headingMd">Quick Actions</Text>
             <Divider />
             <InlineStack gap="300" wrap>
               <Button url="/app/vendors">Manage Vendors</Button>
               <Button url="/app/products">Review Products</Button>
-              <Button url="/app/commissions">View Commissions</Button>
+              <Button url="/app/commissions">Commissions</Button>
               <Button url="/app/payouts">Payouts</Button>
+              <Button url="/app/analytics">Analytics</Button>
               <Button url="/app/settings">Settings</Button>
             </InlineStack>
           </BlockStack>
