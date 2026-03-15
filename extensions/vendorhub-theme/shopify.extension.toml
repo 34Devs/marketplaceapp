@@ -1,0 +1,18 @@
+api_version = "2024-10"
+
+[[extensions]]
+name = "VendorHub Theme"
+handle = "vendorhub-theme"
+type = "theme"
+
+  [[extensions.targeting]]
+  module = "./blocks/vendor-badge.liquid"
+  target = "section"
+
+  [[extensions.targeting]]
+  module = "./blocks/vendor-profile-card.liquid"
+  target = "section"
+
+  [[extensions.targeting]]
+  module = "./blocks/shop-by-vendor.liquid"
+  target = "section"

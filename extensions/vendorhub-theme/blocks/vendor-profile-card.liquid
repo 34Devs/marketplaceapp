@@ -1,0 +1,136 @@
+{% comment %}
+  VendorHub - Vendor Profile Card
+  Shows vendor info on product pages or as a standalone section
+{% endcomment %}
+
+{% assign vendor_name = product.metafields.app.vendor_name.value %}
+{% assign vendor_slug = product.metafields.app.vendor_slug.value %}
+{% assign vendor_id = product.metafields.app.vendor_id.value %}
+
+{% if vendor_name != blank %}
+<div class="vendorhub-profile-card" style="
+  border: 1px solid {{ block.settings.border_color }};
+  border-radius: 12px;
+  padding: 20px;
+  background: {{ block.settings.background_color }};
+  margin: {{ block.settings.margin_top }}px 0 {{ block.settings.margin_bottom }}px;
+">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+    <div style="
+      width: 48px; height: 48px; border-radius: 50%;
+      background: {{ block.settings.avatar_color }};
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 18px;
+    ">
+      {{ vendor_name | slice: 0 }}
+    </div>
+    <div>
+      <div style="font-weight: 600; font-size: 16px; color: {{ block.settings.text_color }};">
+        {{ vendor_name }}
+      </div>
+      <div style="font-size: 13px; color: {{ block.settings.label_color }};">
+        Marketplace Vendor
+      </div>
+    </div>
+  </div>
+
+  {% if block.settings.show_visit_button and vendor_slug != blank %}
+    <a href="/apps/vendorhub/vendor/{{ vendor_slug }}"
+       style="
+        display: inline-block;
+        padding: 8px 20px;
+        background: {{ block.settings.button_color }};
+        color: {{ block.settings.button_text_color }};
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+       ">
+      {{ block.settings.button_text }}
+    </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Vendor Profile Card",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_visit_button",
+      "label": "Show visit store button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Visit Store"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e3e5"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#202223"
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "Label Color",
+      "default": "#6d7175"
+    },
+    {
+      "type": "color",
+      "id": "avatar_color",
+      "label": "Avatar Color",
+      "default": "#5c2dbc"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button Color",
+      "default": "#5c2dbc"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "margin_top",
+      "label": "Margin Top",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin_bottom",
+      "label": "Margin Bottom",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 16,
+      "unit": "px"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,146 @@
+{% comment %}
+  VendorHub - Vendor Badge Block
+  Shows vendor name and link on product pages
+{% endcomment %}
+
+{% assign vendor_name = product.metafields.app.vendor_name.value %}
+{% assign vendor_slug = product.metafields.app.vendor_slug.value %}
+
+{% if vendor_name != blank %}
+<div class="vendorhub-badge" style="
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: {{ block.settings.background_color }};
+  border: 1px solid {{ block.settings.border_color }};
+  border-radius: {{ block.settings.border_radius }}px;
+  font-size: {{ block.settings.font_size }}px;
+  margin: {{ block.settings.margin_top }}px 0 {{ block.settings.margin_bottom }}px;
+">
+  {% if block.settings.show_icon %}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ block.settings.icon_color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  {% endif %}
+
+  <span style="color: {{ block.settings.label_color }};">
+    {{ block.settings.label_text }}
+  </span>
+
+  {% if block.settings.link_to_vendor and vendor_slug != blank %}
+    <a href="/apps/vendorhub/vendor/{{ vendor_slug }}"
+       style="color: {{ block.settings.link_color }}; text-decoration: none; font-weight: 600;">
+      {{ vendor_name }}
+    </a>
+  {% else %}
+    <span style="font-weight: 600; color: {{ block.settings.text_color }};">
+      {{ vendor_name }}
+    </span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Vendor Badge",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label_text",
+      "label": "Label Text",
+      "default": "Sold by"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show vendor icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "link_to_vendor",
+      "label": "Link to vendor profile",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#f8f8f8"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e5e5e5"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "Label Color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "link_color",
+      "label": "Link Color",
+      "default": "#5c2dbc"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon Color",
+      "default": "#5c2dbc"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "label": "Font Size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 14,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin_top",
+      "label": "Margin Top",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin_bottom",
+      "label": "Margin Bottom",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 8,
+      "unit": "px"
+    }
+  ]
+}
+{% endschema %}
