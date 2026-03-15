@@ -13,21 +13,11 @@ import {
   Badge,
   DataTable,
   Link,
-  Icon,
   Divider,
   Banner,
   ProgressBar,
+  Button,
 } from "@shopify/polaris";
-import {
-  PersonIcon,
-  ProductIcon,
-  OrderIcon,
-  CashDollarIcon,
-  ClockIcon,
-  CheckIcon,
-  AlertCircleIcon,
-  ChartVerticalFilledIcon,
-} from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
@@ -142,25 +132,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 function StatCard({
   title,
   value,
-  icon,
   trendLabel,
 }: {
   title: string;
   value: string | number;
-  icon: React.FunctionComponent;
   trendLabel?: string;
 }) {
   return (
     <Card>
       <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center">
-          <Text as="p" variant="bodyMd" tone="subdued">
-            {title}
-          </Text>
-          <div style={{ width: 20, height: 20 }}>
-            <Icon source={icon} tone="subdued" />
-          </div>
-        </InlineStack>
+        <Text as="p" variant="bodyMd" tone="subdued">
+          {title}
+        </Text>
         <Text as="p" variant="headingXl" fontWeight="bold">
           {value}
         </Text>
@@ -278,23 +261,13 @@ export default function Dashboard() {
           <StatCard
             title="Total Revenue"
             value={formatCurrency(totalRevenue)}
-            icon={CashDollarIcon}
           />
           <StatCard
             title="Commission Earned"
             value={formatCurrency(totalCommissionEarned)}
-            icon={ChartVerticalFilledIcon}
           />
-          <StatCard
-            title="Total Orders"
-            value={totalOrders}
-            icon={OrderIcon}
-          />
-          <StatCard
-            title="Pending Payouts"
-            value={pendingPayouts}
-            icon={ClockIcon}
-          />
+          <StatCard title="Total Orders" value={totalOrders} />
+          <StatCard title="Pending Payouts" value={pendingPayouts} />
         </InlineGrid>
 
         {/* Vendor & Product Stats */}
@@ -302,28 +275,18 @@ export default function Dashboard() {
           <StatCard
             title="Total Vendors"
             value={totalVendors}
-            icon={PersonIcon}
             trendLabel={`${approvedVendors} active, ${pendingVendors} pending`}
           />
           <StatCard
             title="Total Products"
             value={totalProducts}
-            icon={ProductIcon}
             trendLabel={`${approvedProducts} approved, ${pendingProducts} pending`}
           />
-          <StatCard
-            title="Active Vendors"
-            value={approvedVendors}
-            icon={CheckIcon}
-          />
-          <StatCard
-            title="Suspended"
-            value={suspendedVendors}
-            icon={AlertCircleIcon}
-          />
+          <StatCard title="Active Vendors" value={approvedVendors} />
+          <StatCard title="Suspended" value={suspendedVendors} />
         </InlineGrid>
 
-        {/* Vendor Approval Rate & Product Approval Rate */}
+        {/* Approval Rates */}
         <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
           <Card>
             <BlockStack gap="300">
@@ -367,7 +330,7 @@ export default function Dashboard() {
           </Card>
         </InlineGrid>
 
-        {/* Tables section */}
+        {/* Recent Vendors Table */}
         <Layout>
           <Layout.Section>
             <Card>
@@ -419,8 +382,8 @@ export default function Dashboard() {
           </Layout.Section>
         </Layout>
 
+        {/* Top Vendors & Recent Orders side by side */}
         <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
-          {/* Top Vendors */}
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
@@ -453,7 +416,6 @@ export default function Dashboard() {
             </BlockStack>
           </Card>
 
-          {/* Recent Orders */}
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
@@ -495,65 +457,11 @@ export default function Dashboard() {
             </Text>
             <Divider />
             <InlineStack gap="300" wrap>
-              <RemixLink to="/app/vendors" style={{ textDecoration: "none" }}>
-                <Box
-                  padding="300"
-                  borderRadius="200"
-                  background="bg-surface-secondary"
-                >
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={PersonIcon} tone="base" />
-                    <Text as="span" variant="bodyMd">
-                      Manage Vendors
-                    </Text>
-                  </InlineStack>
-                </Box>
-              </RemixLink>
-              <RemixLink to="/app/products" style={{ textDecoration: "none" }}>
-                <Box
-                  padding="300"
-                  borderRadius="200"
-                  background="bg-surface-secondary"
-                >
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={ProductIcon} tone="base" />
-                    <Text as="span" variant="bodyMd">
-                      Review Products
-                    </Text>
-                  </InlineStack>
-                </Box>
-              </RemixLink>
-              <RemixLink
-                to="/app/commissions"
-                style={{ textDecoration: "none" }}
-              >
-                <Box
-                  padding="300"
-                  borderRadius="200"
-                  background="bg-surface-secondary"
-                >
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={CashDollarIcon} tone="base" />
-                    <Text as="span" variant="bodyMd">
-                      View Commissions
-                    </Text>
-                  </InlineStack>
-                </Box>
-              </RemixLink>
-              <RemixLink to="/app/settings" style={{ textDecoration: "none" }}>
-                <Box
-                  padding="300"
-                  borderRadius="200"
-                  background="bg-surface-secondary"
-                >
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={ClockIcon} tone="base" />
-                    <Text as="span" variant="bodyMd">
-                      Settings
-                    </Text>
-                  </InlineStack>
-                </Box>
-              </RemixLink>
+              <Button url="/app/vendors">Manage Vendors</Button>
+              <Button url="/app/products">Review Products</Button>
+              <Button url="/app/commissions">View Commissions</Button>
+              <Button url="/app/payouts">Payouts</Button>
+              <Button url="/app/settings">Settings</Button>
             </InlineStack>
           </BlockStack>
         </Card>
