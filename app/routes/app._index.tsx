@@ -11,11 +11,9 @@ import {
   Badge,
   DataTable,
   Link,
-  Divider,
   ProgressBar,
   Button,
 } from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -126,112 +124,106 @@ function statusBadge(status: string) {
 export default function Dashboard() {
   const data = useLoaderData<typeof loader>();
 
-  const formatCurrency = (amount: number) =>
+  const fmt = (amount: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(amount);
 
-  const vendorApprovalRate =
+  const vendorRate =
     data.totalVendors > 0
       ? Math.round((data.approvedVendors / data.totalVendors) * 100)
       : 0;
 
-  const productApprovalRate =
+  const productRate =
     data.totalProducts > 0
       ? Math.round((data.approvedProducts / data.totalProducts) * 100)
       : 0;
 
-  const recentVendorRows = data.recentVendors.map((vendor) => [
-    <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
-      {vendor.storeName}
+  const recentVendorRows = data.recentVendors.map((v) => [
+    <Link key={v.id} url={`/app/vendors/${v.id}`} removeUnderline>
+      {v.storeName}
     </Link>,
-    vendor.email,
-    statusBadge(vendor.status),
-    vendor.rating > 0 ? vendor.rating.toFixed(1) : "-",
-    formatCurrency(vendor.totalSales),
-    new Date(vendor.createdAt).toLocaleDateString(),
+    v.email,
+    statusBadge(v.status),
+    v.rating > 0 ? v.rating.toFixed(1) : "-",
+    fmt(v.totalSales),
+    new Date(v.createdAt).toLocaleDateString(),
   ]);
 
-  const topVendorRows = data.topVendors.map((vendor) => [
-    <Link key={vendor.id} url={`/app/vendors/${vendor.id}`} removeUnderline>
-      {vendor.storeName}
+  const topVendorRows = data.topVendors.map((v) => [
+    <Link key={v.id} url={`/app/vendors/${v.id}`} removeUnderline>
+      {v.storeName}
     </Link>,
-    formatCurrency(vendor.totalSales),
-    String(vendor.totalOrders),
-    vendor.rating > 0 ? vendor.rating.toFixed(1) : "-",
+    fmt(v.totalSales),
+    String(v.totalOrders),
+    v.rating > 0 ? v.rating.toFixed(1) : "-",
   ]);
 
   return (
     <Page title="VendorHub Dashboard">
-      <TitleBar title="VendorHub Dashboard" />
       <BlockStack gap="500">
-        {/* Pending alerts */}
-        {data.pendingVendors > 0 && (
+
+        {/* Alerts */}
+        {(data.pendingVendors > 0 || data.pendingProducts > 0) && (
           <Card>
-            <InlineStack align="space-between" blockAlign="center">
-              <Text as="p" variant="bodyMd" fontWeight="semibold" tone="caution">
-                {data.pendingVendors} vendor{data.pendingVendors > 1 ? "s" : ""} awaiting approval
-              </Text>
-              <Button url="/app/vendors" size="slim">Review</Button>
-            </InlineStack>
-          </Card>
-        )}
-        {data.pendingProducts > 0 && (
-          <Card>
-            <InlineStack align="space-between" blockAlign="center">
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                {data.pendingProducts} product{data.pendingProducts > 1 ? "s" : ""} awaiting approval
-              </Text>
-              <Button url="/app/products" size="slim">Review</Button>
-            </InlineStack>
+            <BlockStack gap="300">
+              {data.pendingVendors > 0 && (
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="p" variant="bodyMd">
+                    <Badge tone="attention">{String(data.pendingVendors)}</Badge>
+                    {" "}vendor{data.pendingVendors > 1 ? "s" : ""} awaiting approval
+                  </Text>
+                  <Button url="/app/vendors" size="slim">Review</Button>
+                </InlineStack>
+              )}
+              {data.pendingProducts > 0 && (
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="p" variant="bodyMd">
+                    <Badge tone="info">{String(data.pendingProducts)}</Badge>
+                    {" "}product{data.pendingProducts > 1 ? "s" : ""} awaiting approval
+                  </Text>
+                  <Button url="/app/products" size="slim">Review</Button>
+                </InlineStack>
+              )}
+            </BlockStack>
           </Card>
         )}
 
-        {/* Revenue Stats - Row 1 */}
+        {/* Revenue Row */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Total Revenue</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {formatCurrency(data.totalRevenue)}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{fmt(data.totalRevenue)}</Text>
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Commission Earned</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {formatCurrency(data.totalCommissionEarned)}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{fmt(data.totalCommissionEarned)}</Text>
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Total Orders</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.totalOrders}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.totalOrders}</Text>
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Pending Payouts</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.pendingPayouts}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.pendingPayouts}</Text>
             </BlockStack>
           </Card>
         </InlineGrid>
 
-        {/* Vendor & Product Stats - Row 2 */}
+        {/* Vendor/Product Row */}
         <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Total Vendors</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.totalVendors}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.totalVendors}</Text>
               <Text as="p" variant="bodySm" tone="subdued">
                 {data.approvedVendors} active, {data.pendingVendors} pending
               </Text>
@@ -240,9 +232,7 @@ export default function Dashboard() {
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Total Products</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.totalProducts}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.totalProducts}</Text>
               <Text as="p" variant="bodySm" tone="subdued">
                 {data.approvedProducts} approved, {data.pendingProducts} pending
               </Text>
@@ -251,17 +241,13 @@ export default function Dashboard() {
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Active Vendors</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.approvedVendors}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.approvedVendors}</Text>
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">Suspended</Text>
-              <Text as="p" variant="headingXl" fontWeight="bold">
-                {data.suspendedVendors}
-              </Text>
+              <Text as="p" variant="headingXl" fontWeight="bold">{data.suspendedVendors}</Text>
             </BlockStack>
           </Card>
         </InlineGrid>
@@ -272,24 +258,24 @@ export default function Dashboard() {
             <BlockStack gap="300">
               <Text as="h2" variant="headingMd">Vendor Approval Rate</Text>
               <InlineStack align="space-between">
-                <Text as="p" variant="headingLg">{vendorApprovalRate}%</Text>
+                <Text as="p" variant="headingLg">{vendorRate}%</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  {data.approvedVendors} / {data.totalVendors} vendors
+                  {data.approvedVendors} / {data.totalVendors}
                 </Text>
               </InlineStack>
-              <ProgressBar progress={vendorApprovalRate} tone="primary" size="small" />
+              <ProgressBar progress={vendorRate} tone="primary" size="small" />
             </BlockStack>
           </Card>
           <Card>
             <BlockStack gap="300">
               <Text as="h2" variant="headingMd">Product Approval Rate</Text>
               <InlineStack align="space-between">
-                <Text as="p" variant="headingLg">{productApprovalRate}%</Text>
+                <Text as="p" variant="headingLg">{productRate}%</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  {data.approvedProducts} / {data.totalProducts} products
+                  {data.approvedProducts} / {data.totalProducts}
                 </Text>
               </InlineStack>
-              <ProgressBar progress={productApprovalRate} tone="primary" size="small" />
+              <ProgressBar progress={productRate} tone="primary" size="small" />
             </BlockStack>
           </Card>
         </InlineGrid>
@@ -299,13 +285,12 @@ export default function Dashboard() {
           <BlockStack gap="400">
             <InlineStack align="space-between">
               <Text as="h2" variant="headingMd">Recent Vendors</Text>
-              <Link url="/app/vendors" removeUnderline>View all</Link>
+              <Button url="/app/vendors" variant="plain">View all</Button>
             </InlineStack>
-            <Divider />
             {data.recentVendors.length > 0 ? (
               <DataTable
                 columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
-                headings={["Store Name", "Email", "Status", "Rating", "Total Sales", "Joined"]}
+                headings={["Store", "Email", "Status", "Rating", "Sales", "Joined"]}
                 rows={recentVendorRows}
               />
             ) : (
@@ -321,9 +306,8 @@ export default function Dashboard() {
           <BlockStack gap="400">
             <InlineStack align="space-between">
               <Text as="h2" variant="headingMd">Top Vendors by Sales</Text>
-              <Link url="/app/vendors" removeUnderline>View all</Link>
+              <Button url="/app/vendors" variant="plain">View all</Button>
             </InlineStack>
-            <Divider />
             {data.topVendors.length > 0 ? (
               <DataTable
                 columnContentTypes={["text", "numeric", "numeric", "text"]}
@@ -342,7 +326,6 @@ export default function Dashboard() {
         <Card>
           <BlockStack gap="300">
             <Text as="h2" variant="headingMd">Quick Actions</Text>
-            <Divider />
             <InlineStack gap="300" wrap>
               <Button url="/app/vendors">Manage Vendors</Button>
               <Button url="/app/products">Review Products</Button>
@@ -353,6 +336,7 @@ export default function Dashboard() {
             </InlineStack>
           </BlockStack>
         </Card>
+
       </BlockStack>
     </Page>
   );
