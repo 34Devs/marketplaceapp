@@ -29,7 +29,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
           title: true,
         },
       },
-      reviews: {
+      reviewsReceived: {
         orderBy: { createdAt: "desc" },
         take: 10,
         select: {
@@ -68,9 +68,9 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
       </div>`
     : `<p class="vh-empty">No products listed yet.</p>`;
 
-  const reviewsHtml = vendor.reviews.length > 0
+  const reviewsHtml = vendor.reviewsReceived.length > 0
     ? `<div class="vh-reviews">
-        ${vendor.reviews.map((r) => `
+        ${vendor.reviewsReceived.map((r) => `
           <div class="vh-review-card">
             <div class="vh-review-header">
               <strong>${escapeHtml(r.customerName)}</strong>
@@ -108,7 +108,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
       </div>
 
       <div class="vh-section">
-        <h2 class="vh-section-title">Reviews (${vendor.reviews.length})</h2>
+        <h2 class="vh-section-title">Reviews (${vendor.reviewsReceived.length})</h2>
         ${reviewsHtml}
       </div>
     </div>
